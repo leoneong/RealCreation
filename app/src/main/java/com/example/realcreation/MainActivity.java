@@ -1,5 +1,6 @@
 package com.example.realcreation;
 
+import android.os.AsyncTask;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
@@ -9,11 +10,19 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
 
+import com.amazonaws.auth.CognitoCredentialsProvider;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
@@ -25,6 +34,12 @@ public class MainActivity extends AppCompatActivity {
     profile_jfragment pFrag;
     MenuItem prevMenuItem;
 
+    private static final String TAG = Credential.class.getSimpleName();
+    private CognitoCredentialsProvider cognitoCredentialsProvider;
+    String id;
+    String TableName = "Users";
+
+    CognitoUserSession cognitoUserSession;
 
 
     @Override
@@ -87,6 +102,19 @@ public class MainActivity extends AppCompatActivity {
         setupViewPager(viewPager);
     }
 
+    private void init(){
+        cognitoUserSession = AppHelper.getCurrSession();
+        new Credential().execute();
+        databaseRetrieve();
+    }
+
+    private void databaseRetrieve() {
+        AmazonDynamoDBClient client = new AmazonDynamoDBClient(cognitoCredentialsProvider);
+        AttributeValue attributeValue = new AttributeValue("1");
+        Map<String, AttributeValue> key = new HashMap<>();
+        key.put("Id", attributeValue);
+        client.getItem(TableName, key);
+    }
 
 
     private void setupViewPager(ViewPager viewPager) {
@@ -116,5 +144,19 @@ public class MainActivity extends AppCompatActivity {
             default:
         }
         return true;
+    }
+
+
+    private class Credential extends AsyncTask {
+        @Override
+        protected Object doInBackground(Object[] objects) {
+            cognitoCredentialsProvider = AppHelper.getCognitoCredentialsProvider();
+            id = cognitoCredentialsProvider.getIdentityId();
+            return objects;
+        }
+        @Override
+        protected void onPostExecute(Object o) {
+            Log.d(TAG, "Done ");
+        }
     }
 }
